@@ -396,9 +396,15 @@ class NeMoGymResponseCreateParamsNonStreaming(BaseModel):
 
 
 def _require_response_output_item_type(value: Any) -> Any:
-    """Prevent an untagged output item from being coerced into the wrong union member."""
-    if isinstance(value, dict) and "type" not in value:
-        raise ValueError("Responses API output items must include a type discriminator")
+    """Prevent an untagged output item from being coerced into the wrong union member.
+
+    Message items are discriminated by ``role`` and may omit ``type`` (it is
+    optional on ``EasyInputMessage``); every other union member requires
+    ``type``. A dict with neither key cannot be any member, so reject it with
+    a clear error before permissive union coercion can misclassify it.
+    """
+    if isinstance(value, dict) and "type" not in value and "role" not in value:
+        raise ValueError("Responses API output items must include a type or role discriminator")
     return value
 
 

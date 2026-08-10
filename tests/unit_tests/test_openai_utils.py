@@ -31,6 +31,7 @@ from pydantic import ValidationError
 
 from nemo_gym.openai_utils import (
     NeMoGymAsyncOpenAI,
+    NeMoGymEasyInputMessage,
     NeMoGymImageGenerationCall,
     NeMoGymLocalShellCall,
     NeMoGymResponse,
@@ -282,6 +283,15 @@ class TestNeMoGymResponseToolCallItems:
             (NeMoGymResponseCustomToolCall, ResponseCustomToolCall),
         )
         assert all(gym_cls.model_fields["type"].is_required() for gym_cls, _ in pairs)
+
+    def test_output_message_items_do_not_require_type(self) -> None:
+        # EasyInputMessage is discriminated by role and its type field is
+        # optional, so the discriminator guard must not reject role-only
+        # message dicts. AviaryNeMoGymResponse embeds such messages inside
+        # its transition output (resources_servers/aviary/schemas.py), which
+        # is where an over-strict guard first surfaced as a test failure.
+        response = NeMoGymResponse.model_validate(_response_with_output([{"role": "user", "content": "obs"}]))
+        assert isinstance(response.output[0], NeMoGymEasyInputMessage)
 
     def test_output_call_items_inherit_upstream_types(self) -> None:
         # These must inherit the upstream openai typing rather than redefine it
